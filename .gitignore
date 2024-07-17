@@ -1,0 +1,64 @@
+######> BACKEND ######
+
+###> symfony/framework-bundle ###
+/back/.env.local
+/back/.env.local.php
+/back/.env.*.local
+/back/.env.*
+/back/config/secrets/prod/prod.decrypt.private.php
+/back/public/bundles/
+/back/var/
+/back/vendor/
+/back/migrations/
+###< symfony/framework-bundle ###
+
+###> phpunit/phpunit ###
+/back/phpunit.xml
+/back/.phpunit.result.cache
+###< phpunit/phpunit ###
+
+###> symfony/phpunit-bridge ###
+/back/.phpunit.result.cache
+/back/phpunit.xml
+###< symfony/phpunit-bridge ###
+
+###> symfony/asset-mapper ###
+/back/public/assets/
+/back/assets/vendor/
+###< symfony/asset-mapper ###
+
+###> lexik/jwt-authentication-bundle ###
+/back/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###
+
+######< BACKEND ######
+
+######> FRONTEND ######
+# Logs
+/front/logs
+/front/*.log
+/front/npm-debug.log*
+/front/yarn-debug.log*
+/front/yarn-error.log*
+/front/pnpm-debug.log*
+/front/lerna-debug.log*
+
+/front/node_modules
+/front/dist
+/front/dist-ssr
+/front/*.local
+
+# Editor directories and files
+/front/.vscode/*
+/front/!.vscode/extensions.json
+/front/.idea
+/front/.DS_Store
+/front/*.suo
+/front/*.ntvs*
+/front/*.njsproj
+/front/*.sln
+/front/*.sw?
+
+#TinyMCE
+/front/public/tinymce/
+######< FRONTEND ######

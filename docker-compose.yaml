@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./back:/var/www/html
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./back
+    container_name: symfony-backend
+    volumes:
+      - ./back:/var/www/html
+    ports:
+      - "9000:9000"
+    environment:
+      DATABASE_URL: mysql://user:password@mysql:3306/NWSN
+    depends_on:
+      - mysql
+    healthcheck:
+      test: ["CMD", "php", "-r", "try { new PDO(getenv('DATABASE_URL')); exit(0); } catch (Exception $e) { exit(1); }"]
+      interval: 10s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./front
+    container_name: react-frontend
+    ports:
+      - "5000:5000"
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: NWSN
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "user", "-p password"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  mysql-data:
