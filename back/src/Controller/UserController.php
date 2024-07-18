@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
+use Vich\UploaderBundle\Templating\Helper\UploaderHelper;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -53,6 +54,44 @@ class UserController extends AbstractController
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/api/delete-user', name: 'delete_user', methods: ['DELETE'])]
+    public function deleteUser(EntityManagerInterface $entityManager, string $projectDir, UploaderHelper $helper): Response
+    {
+        /** @var \App\Entity\User $user */
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->json(['error' => 'No authenticated user found.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $filePaths = [];
+        try {
+            $entityManager->beginTransaction();
+
+            foreach ($user->getImages() as $image) {
+                $path = $helper->asset($image, 'imageFile');
+                $filePath = $this->getParameter('kernel.project_dir') . "/public" . $path;
+                if (file_exists($filePath)) {
+                    $filePaths[] = $filePath;  // Stocker le chemin pour suppression ultérieure
+                }
+                $entityManager->remove($image);
+            }
+
+            $entityManager->remove($user);
+            $entityManager->flush();
+            $entityManager->commit();
+
+            // Suppression des fichiers après le commit
+            foreach ($filePaths as $filePath) {
+                unlink($filePath);
+            }
+
+            return $this->json(['message' => 'User and all associated images have been deleted.'], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            $entityManager->rollback();
+            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 }
