@@ -76,7 +76,7 @@ class ImageController extends AbstractController
         }
     }
 
-    #[Route('/api/user-images', name: 'public_images', methods: ['GET'])]
+    #[Route('/api/user-images', name: 'user_images', methods: ['GET'])]
     public function getUserImages(ImageRepository $imageRepository, SerializerInterface $serializer): Response
     {
         try {
@@ -97,7 +97,7 @@ class ImageController extends AbstractController
     public function viewImage(string $uniqueId, ImageRepository $repository, UploaderHelper $helper): Response
     {
         try {
-            // Tente de trouver l'image par son uniqueId
+            // Tente de trouver l'image par son uniqueId           
             $image = $repository->findOneBy(['uniqueId' => $uniqueId]);
 
             // Vérifie si l'image est disponible et publique
@@ -121,6 +121,44 @@ class ImageController extends AbstractController
             return new BinaryFileResponse($filePath, Response::HTTP_OK);
         } catch (\Exception $e) {
             // Gestion des erreurs non spécifiques
+            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/api/delete-image/{uniqueId}', name: 'delete_image', methods: ['DELETE'])]
+    public function deleteImage(string $uniqueId, ImageRepository $imageRepository, EntityManagerInterface $entityManager, UploaderHelper $helper): Response
+    {
+        try {
+            // Récupération de l'image par son uniqueId
+            $image = $imageRepository->findOneBy(['uniqueId' => $uniqueId]);
+
+            // Vérifie si l'image existe et si l'utilisateur est le propriétaire
+            if (!$image) {
+                return $this->json(['error' => 'Image not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            if ($image->getOwner() !== $this->getUser()) {
+                return $this->json(['error' => 'You do not have permission to delete this image.'], Response::HTTP_FORBIDDEN);
+            }
+
+            // Suppression de l'image
+            $path = $helper->asset($image, 'imageFile');
+            if (!$path) {
+                return $this->json(['error' => 'Image file path could not be determined.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
+            $filePath = $this->getParameter('kernel.project_dir') . "/public" . $path;
+
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+
+            // Remove the image entity from the database
+            $entityManager->remove($image);
+            $entityManager->flush();
+
+            return $this->json(['message' => 'Image successfully deleted.'], Response::HTTP_OK);
+        } catch (\Exception $e) {
             return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
