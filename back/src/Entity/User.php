@@ -3,22 +3,23 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '`user`')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["user:read"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(["user:read", "user:write"])]
     private ?string $email = null;
 
     /**
@@ -27,25 +28,14 @@ class User implements UserInterface
     #[ORM\Column]
     private array $roles = [];
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $googleId = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $name = null;
-
     /**
-     * @var Collection<int, Post>
+     * @var string The hashed password
      */
-    #[ORM\OneToMany(targetEntity: Post::class, mappedBy: 'author')]
-    private Collection $posts;
+    #[ORM\Column]
+    private ?string $password = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $gravatarUrl = null;
-
-    public function __construct()
-    {
-        $this->posts = new ArrayCollection();
-    }
+    private ?string $name = null;
 
     public function getId(): ?int
     {
@@ -76,6 +66,7 @@ class User implements UserInterface
 
     /**
      * @see UserInterface
+     *
      * @return list<string>
      */
     public function getRoles(): array
@@ -98,6 +89,21 @@ class User implements UserInterface
     }
 
     /**
+     * @see PasswordAuthenticatedUserInterface
+     */
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): static
+    {
+        $this->password = $password;
+
+        return $this;
+    }
+
+    /**
      * @see UserInterface
      */
     public function eraseCredentials(): void
@@ -106,68 +112,14 @@ class User implements UserInterface
         // $this->plainPassword = null;
     }
 
-    public function getGoogleId(): ?string
-    {
-        return $this->googleId;
-    }
-
-    public function setGoogleId(?string $googleId): static
-    {
-        $this->googleId = $googleId;
-
-        return $this;
-    }
-
     public function getName(): ?string
     {
         return $this->name;
     }
 
-    public function setName(?string $name): static
+    public function setName(string $name): static
     {
         $this->name = $name;
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Post>
-     */
-    public function getPosts(): Collection
-    {
-        return $this->posts;
-    }
-
-    public function addPost(Post $post): static
-    {
-        if (!$this->posts->contains($post)) {
-            $this->posts->add($post);
-            $post->setAuthor($this);
-        }
-
-        return $this;
-    }
-
-    public function removePost(Post $post): static
-    {
-        if ($this->posts->removeElement($post)) {
-            // set the owning side to null (unless already changed)
-            if ($post->getAuthor() === $this) {
-                $post->setAuthor(null);
-            }
-        }
-
-        return $this;
-    }
-
-    public function getGravatarUrl(): ?string
-    {
-        return $this->gravatarUrl;
-    }
-
-    public function setGravatarUrl(string $gravatarUrl): static
-    {
-        $this->gravatarUrl = $gravatarUrl;
 
         return $this;
     }
