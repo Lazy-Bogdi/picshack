@@ -58,7 +58,7 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/delete-user', name: 'delete_user', methods: ['DELETE'])]
-    public function deleteUser(EntityManagerInterface $entityManager, string $projectDir, UploaderHelper $helper): Response
+    public function deleteUser(EntityManagerInterface $entityManager, UploaderHelper $helper): Response
     {
         /** @var \App\Entity\User $user */
         $user = $this->getUser();
