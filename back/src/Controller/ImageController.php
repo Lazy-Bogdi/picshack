@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Image;
+use App\DTO\ImageStatusDTO;
 use App\DTO\ImageUploadDTO;
+use Symfony\Component\Uid\Uuid;
 use App\Repository\ImageRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -11,11 +13,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Vich\UploaderBundle\Templating\Helper\UploaderHelper;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Vich\UploaderBundle\Templating\Helper\UploaderHelper;
-use Symfony\Component\Uid\Uuid;
 
 class ImageController extends AbstractController
 {
@@ -158,6 +159,39 @@ class ImageController extends AbstractController
             $entityManager->flush();
 
             return $this->json(['message' => 'Image successfully deleted.'], Response::HTTP_OK);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/api/update-image-status', name: 'update_image_status', methods: ['PUT'])]
+    public function updateImageStatus(Request $request, ImageRepository $imageRepository, EntityManagerInterface $entityManager, SerializerInterface $serializer, ValidatorInterface $validator): Response
+    {
+        try {
+            $dto = $serializer->deserialize($request->getContent(), ImageStatusDTO::class, 'json');
+
+            // Validation du DTO
+            $errors = $validator->validate($dto);
+            if (count($errors) > 0) {
+                return $this->json($errors, Response::HTTP_BAD_REQUEST);
+            }
+
+            // Recherche de l'image correspondante
+            $image = $imageRepository->findOneBy(['uniqueId' => $dto->uniqueId]);
+            if (!$image) {
+                return $this->json(['error' => 'Image not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            // Mise à jour du statut isPublic
+            $image->setIsPublic($dto->isPublic);
+            $entityManager->flush();
+
+            // Renvoi de l'image mise à jour
+            return $this->json(
+                ['message' => 'Image status updated successfully', 'image' => $serializer->serialize($image, 'json', ['groups' => 'image:read'])],
+                Response::HTTP_OK,
+                ['Content-Type' => 'application/json']
+            );
         } catch (\Exception $e) {
             return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
