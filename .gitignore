@@ -31,6 +31,10 @@
 /back/config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
 
+###> lexik/jwt-authentication-bundle ###
+/back/public/users_upload/
+###< lexik/jwt-authentication-bundle ###
+
 ######< BACKEND ######
 
 ######> FRONTEND ######
