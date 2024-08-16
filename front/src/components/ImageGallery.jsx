@@ -1,23 +1,29 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFetchImages } from '../hooks/useFetchImages';
-import { useAuth } from '../context/AuthContext'; // Import the AuthContext to access authentication state
+import { useAuth } from '../context/AuthContext';
 import VisibilityToggle from './VisibilityToggle';
 import UploadModal from './UploadModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 import axios from 'axios';
+import { FaTrash } from 'react-icons/fa';
+import NotificationModal from './NotificationModal';
 
 function ImageGallery() {
-    const { userImages, loading, error, addImage } = useFetchImages();
+    const { userImages, loading, error, addImage, deleteImage } = useFetchImages();
     const baseURL = 'https://127.0.0.1:8000';
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth(); // Access the authentication state
+    const { isAuthenticated } = useAuth();
 
     const [draggedImage, setDraggedImage] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [imageToDelete, setImageToDelete] = useState(null);
+    const [notification, setNotification] = useState(null);
     const fileInputRef = useRef(null);
 
     const handleLoginClick = () => {
-        navigate('/auth'); // Navigate to the login page
+        navigate('/auth');
     };
 
     if (!isAuthenticated) {
@@ -30,7 +36,7 @@ function ImageGallery() {
     }
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div><span className="loading loading-ring loading-lg"></span></div>;
     }
 
     if (error) {
@@ -41,8 +47,8 @@ function ImageGallery() {
         console.log(`Image ${imageId} visibility changed to: ${newStatus}`);
     };
 
-    const handleImageClick = (uniqueId, imageName) => {
-        navigate(`/image/${uniqueId}/${imageName}`);  // Navigate to the ImageViewer route
+    const handleImageClick = (uniqueId) => {
+        navigate(`/image/${uniqueId}`);
     };
 
     const handleDrop = (e) => {
@@ -50,7 +56,7 @@ function ImageGallery() {
         const file = e.dataTransfer.files[0];
         if (file) {
             setDraggedImage(file);
-            setIsUploadModalOpen(true); // Open the modal after an image is dropped
+            setIsUploadModalOpen(true);
         }
     };
 
@@ -58,7 +64,7 @@ function ImageGallery() {
         const file = e.target.files[0];
         if (file) {
             setDraggedImage(file);
-            setIsUploadModalOpen(true); // Open the modal after a file is selected
+            setIsUploadModalOpen(true);
         }
     };
 
@@ -69,17 +75,23 @@ function ImageGallery() {
 
         try {
             const response = await axios.post('/api/upload', formData);
-            alert('Image uploaded successfully');
+            setNotification({
+                message: 'Image uploaded successfully!',
+                type: 'success',
+            });
             const newImage = response.data.image;
             addImage(JSON.parse(newImage));
         } catch (error) {
-            alert('Failed to upload image');
+            setNotification({
+                message: 'Failed to upload image.',
+                type: 'error',
+            });
             console.error(error)
         } finally {
             setIsUploadModalOpen(false);
             setDraggedImage(null);
             if (fileInputRef.current) {
-                fileInputRef.current.value = ''; // Reset the file input so the same file can be selected again
+                fileInputRef.current.value = '';
             }
         }
     };
@@ -88,15 +100,46 @@ function ImageGallery() {
         setIsUploadModalOpen(false);
         setDraggedImage(null);
         if (fileInputRef.current) {
-            fileInputRef.current.value = ''; // Reset the file input so the same file can be selected again
+            fileInputRef.current.value = '';
         }
+    };
+
+    const openDeleteModal = (uniqueId) => {
+        setImageToDelete(uniqueId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!imageToDelete) return;
+
+        try {
+            await axios.delete(`/api/delete-image/${imageToDelete}`);
+            setNotification({
+                message: 'Image deleted successfully!',
+                type: 'success',
+            });
+            deleteImage(imageToDelete);
+        } catch (error) {
+            setNotification({
+                message: 'Failed to delete image.',
+                type: 'error',
+            });
+            console.error(error);
+        } finally {
+            setIsDeleteModalOpen(false);
+            setImageToDelete(null);
+        }
+    };
+
+    const cancelDelete = () => {
+        setIsDeleteModalOpen(false);
+        setImageToDelete(null);
     };
 
     return (
         <div className="container mx-auto p-4">
             <h2 className="text-2xl font-bold mt-8 mb-4">Your Images</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {/* Empty card for drag-and-drop or click-to-upload */}
                 <div
                     className="card shadow-lg rounded-lg overflow-hidden border-dashed border-2 border-gray-300 flex justify-center items-center cursor-pointer"
                     onDrop={handleDrop}
@@ -127,7 +170,7 @@ function ImageGallery() {
                     <div key={image.id} className="card shadow-lg rounded-lg overflow-hidden">
                         <div
                             className="cursor-pointer"
-                            onClick={() => handleImageClick(image.uniqueId, image.imageName)}
+                            onClick={() => handleImageClick(image.uniqueId)}
                         >
                             <img
                                 src={`${baseURL}/api/view-images/${image.uniqueId}`}
@@ -138,12 +181,15 @@ function ImageGallery() {
                                 {image.imageName}
                             </h3>
                         </div>
-                        <div className="p-4">
+                        <div className="p-4 flex justify-between items-center">
                             <VisibilityToggle
                                 uniqueId={image.uniqueId}
                                 isPublic={image.isPublic}
                                 onStatusChange={(newStatus) => handleStatusChange(image.id, newStatus)}
                             />
+                            <button onClick={() => openDeleteModal(image.uniqueId)} className="text-red-500 hover:text-red-700">
+                                <FaTrash size={20} />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -153,6 +199,25 @@ function ImageGallery() {
                 <UploadModal
                     onSubmit={handleModalSubmit}
                     onCancel={cancelUpload}
+                />
+            )}
+            {isDeleteModalOpen && (
+                <DeleteConfirmationModal
+                    title="Delete Image"
+                    message="Are you sure you want to delete this image? This action cannot be undone."
+                    confirmText="Delete"
+                    onDelete={handleDelete}
+                    onCancel={cancelDelete}
+                />
+            )}
+
+            {notification && (
+
+                <NotificationModal
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={() => setNotification(null)}
+                    redirect={false}   // No redirection
                 />
             )}
         </div>

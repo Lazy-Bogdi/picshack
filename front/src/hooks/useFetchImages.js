@@ -34,5 +34,10 @@ export function useFetchImages() {
         setUserImages((prevImages) => [newImage, ...prevImages]); // Add new image to the beginning of the array
     };
 
-    return { userImages, loading, error, addImage };
+    const deleteImage = (uniqueId) => {
+        setUserImages((prevImages) => prevImages.filter(image => image.uniqueId !== uniqueId));
+    };
+
+
+    return { userImages, loading, error, addImage, deleteImage };
 }
