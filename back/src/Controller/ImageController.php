@@ -11,12 +11,18 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Vich\UploaderBundle\Templating\Helper\UploaderHelper;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Security\Core\User\UserProviderInterface;
+// use Lexik\Bundle\JWTAuthenticationBundle\Security\Authenticator\TokenExtractor\AuthorizationHeaderTokenExtractor;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 class ImageController extends AbstractController
 {
@@ -61,28 +67,12 @@ class ImageController extends AbstractController
         }
     }
 
-    #[Route('/api/public-images', name: 'public_images', methods: ['GET'])]
-    public function getPublicImages(ImageRepository $imageRepository, SerializerInterface $serializer): Response
-    {
-        try {
-            // Récupération des images publiques
-            $images = $imageRepository->findBy(['isPublic' => true]);
-
-            // Sérialisation des images
-            $json = $serializer->serialize($images, 'json', ['groups' => 'image:read']);
-            return new Response($json, Response::HTTP_OK, ['Content-Type' => 'application/json']);
-        } catch (\Exception $e) {
-            // Gestion des autres types d'erreurs
-            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-    }
-
     #[Route('/api/user-images', name: 'user_images', methods: ['GET'])]
     public function getUserImages(ImageRepository $imageRepository, SerializerInterface $serializer): Response
     {
         try {
             // Récupération des images publiques
-            $images = $imageRepository->findBy(['owner' => $this->getUser()]);
+            $images = $imageRepository->findBy(['owner' => $this->getUser()], ["createdAt" => "DESC"]);
 
             // Sérialisation des images
             $json = $serializer->serialize($images, 'json', ['groups' => 'image:read']);
@@ -93,10 +83,13 @@ class ImageController extends AbstractController
         }
     }
 
-
     #[Route('/api/view-images/{uniqueId}', name: 'view_image')]
-    public function viewImage(string $uniqueId, ImageRepository $repository, UploaderHelper $helper): Response
-    {
+    public function viewImage(
+        Request $request,
+        string $uniqueId,
+        ImageRepository $repository,
+        UploaderHelper $helper,
+    ): Response {
         try {
             // Tente de trouver l'image par son uniqueId           
             $image = $repository->findOneBy(['uniqueId' => $uniqueId]);
@@ -106,6 +99,10 @@ class ImageController extends AbstractController
                 return $this->json(['error' => 'Image not found or not accessible.'], Response::HTTP_NOT_FOUND);
             }
 
+            // if (!$image->getIsPublic() && $image->getOwner() != $user) {
+
+            //     return $this->json(['error' => 'Image is private.'], Response::HTTP_UNAUTHORIZED);
+            // }
             // Récupère le chemin d'accès au fichier
             $path = $helper->asset($image, 'imageFile');
             if (!$path) {
@@ -122,6 +119,62 @@ class ImageController extends AbstractController
             return new BinaryFileResponse($filePath, Response::HTTP_OK);
         } catch (\Exception $e) {
             // Gestion des erreurs non spécifiques
+            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    #[Route('/api/check-image-access/{uniqueId}', name: 'check_image_access', methods: ['GET'])]
+    public function checkImageAccess(
+        string $uniqueId,
+        Request $request,
+        ImageRepository $repository,
+        JWTTokenManagerInterface $jwtManager,
+        UserProviderInterface $userProvider
+    ): JsonResponse {
+        try {
+            // Try to find the image by its uniqueId
+            $image = $repository->findOneBy(['uniqueId' => $uniqueId]);
+
+            if (!$image) {
+                return $this->json(['error' => 'Image not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            if ($image->getIsPublic()) {
+                // If the image is public, it can be viewed by anyone
+                return $this->json(['canView' => true], Response::HTTP_OK);
+            }
+
+            $user = null;
+
+            // Check if Authorization header exists and is valid
+            $authHeader = $request->headers->get('Authorization');
+            if ($authHeader && str_starts_with($authHeader, 'Bearer ')) {
+                $jwtToken = substr($authHeader, 7); // Remove 'Bearer ' prefix
+
+                try {
+                    // Parse and decode the JWT token
+                    $payload = $jwtManager->parse($jwtToken);
+
+                    if ($payload) {
+                        // Load the user from the payload
+                        $username = $payload[$jwtManager->getUserIdClaim()];
+                        $user = $userProvider->loadUserByIdentifier($username);
+                    }
+                } catch (\Exception $e) {
+                    // If token parsing or user loading fails, treat as anonymous
+                    $user = null;
+                }
+            }
+
+            if ($user instanceof UserInterface && $image->getOwner() === $user) {
+                // If the image is private but the user is the owner, it can be viewed
+                return $this->json(['canView' => true], Response::HTTP_OK);
+            }
+
+            // If the image is private and the user is not the owner, it cannot be viewed
+            return $this->json(['canView' => false, 'error' => 'Image is private and not accessible.'], Response::HTTP_UNAUTHORIZED);
+        } catch (\Exception $e) {
+            // Handle unexpected errors
             return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

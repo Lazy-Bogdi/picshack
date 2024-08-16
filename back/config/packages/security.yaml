@@ -45,7 +45,7 @@ security:
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
         - { path: ^/api/login|register, roles: PUBLIC_ACCESS }
-        - { path: ^/api/public-images, roles: PUBLIC_ACCESS }
+        - { path: ^/api/check-image-access, roles: PUBLIC_ACCESS }
         - { path: ^/api/view-image, roles: PUBLIC_ACCESS }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
 
