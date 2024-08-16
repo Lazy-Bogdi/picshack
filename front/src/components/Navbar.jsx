@@ -11,11 +11,14 @@ function Navbar() {
     return (
         <nav className="navbar bg-base-200">
             <div className="navbar-start">
-                <a className="btn btn-ghost normal-case text-xl" onClick={() => navigate('/')}>My App</a>
+                <a className="btn btn-ghost normal-case text-xl" onClick={() => navigate('/')}>PicShack</a>
             </div>
             <div className="navbar-end">
                 {isAuthenticated ? (
                     <>
+                        <button className="btn btn-ghost" onClick={() => navigate('/profile')}>
+                            Profile
+                        </button>
                         <div className="dropdown dropdown-end ml-4">
                             <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
                                 <div className="w-10 rounded-full">
