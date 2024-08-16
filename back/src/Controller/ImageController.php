@@ -129,19 +129,23 @@ class ImageController extends AbstractController
         Request $request,
         ImageRepository $repository,
         JWTTokenManagerInterface $jwtManager,
-        UserProviderInterface $userProvider
+        UserProviderInterface $userProvider,SerializerInterface $serializer
     ): JsonResponse {
         try {
             // Try to find the image by its uniqueId
             $image = $repository->findOneBy(['uniqueId' => $uniqueId]);
 
             if (!$image) {
-                return $this->json(['error' => 'Image not found.'], Response::HTTP_NOT_FOUND);
+                return $this->json(['canView' => false, 'error' => 'Image not found.'], Response::HTTP_NOT_FOUND);
             }
-
+            // if ($image->getIsPublic()) {
+            //     // If the image is public, it can be viewed by anyone
+            //     return $this->json(['canView' => true], Response::HTTP_OK);
+            // }
             if ($image->getIsPublic()) {
-                // If the image is public, it can be viewed by anyone
-                return $this->json(['canView' => true], Response::HTTP_OK);
+                // Serialize the image with the 'image:read' group
+                $imageData = $serializer->serialize($image, 'json', ['groups' => 'image:read']);
+                return $this->json(['canView' => true, 'image' => json_decode($imageData)], Response::HTTP_OK);
             }
 
             $user = null;
@@ -166,16 +170,22 @@ class ImageController extends AbstractController
                 }
             }
 
+            // if ($user instanceof UserInterface && $image->getOwner() === $user) {
+            //     // If the image is private but the user is the owner, it can be viewed
+            //     return $this->json(['canView' => true], Response::HTTP_OK);
+            // }
             if ($user instanceof UserInterface && $image->getOwner() === $user) {
-                // If the image is private but the user is the owner, it can be viewed
-                return $this->json(['canView' => true], Response::HTTP_OK);
+                // If the user is the owner, serialize the image with the 'image:read' group
+                $imageData = $serializer->serialize($image, 'json', ['groups' => 'image:read']);
+                return $this->json(['canView' => true, 'image' => json_decode($imageData)], Response::HTTP_OK);
             }
+    
 
             // If the image is private and the user is not the owner, it cannot be viewed
             return $this->json(['canView' => false, 'error' => 'Image is private and not accessible.'], Response::HTTP_UNAUTHORIZED);
         } catch (\Exception $e) {
             // Handle unexpected errors
-            return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['canView' => false, 'error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
