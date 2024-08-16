@@ -13,7 +13,6 @@ function App() {
           <Navbar />
           <main>
             <AppRoutes /> {/* Composant qui gère toutes les routes */}
-            {/* <ImageUploader /> */}
           </main>
         </div>
       </BrowserRouter>
