@@ -94,4 +94,16 @@ class UserController extends AbstractController
             return $this->json(['error' => 'An unexpected error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    #[Route('/api/user-profile', name: 'user_profile', methods: ['GET'])]
+    public function getUserProfile(): Response
+    {
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json(['error' => 'No authenticated user found.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->json($user, Response::HTTP_OK, [], ['groups' => 'user:read']);
+    }
 }
