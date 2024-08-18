@@ -12,7 +12,7 @@ import NotificationModal from './NotificationModal';
 function ImageGallery() {
     const { userImages, loading, error, addImage, deleteImage } = useFetchImages();
     // const baseURL = 'https://127.0.0.1:8000';
-    const baseURL = "http://vps-7cceaa46.vps.ovh.net:9999";
+    const baseURL = "http://vps-7cceaa46.vps.ovh.net:8437";
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
 
