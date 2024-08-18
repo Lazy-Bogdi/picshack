@@ -46,7 +46,7 @@ export async function loginUser(username, password) {
         setAuthToken(response.data.token);
         return { success: true };
     } catch (error) {
-        return { error: error.response?.data || 'An unexpected error occurred' };
+        return { error: error.response?.data || error };
     }
 }
 
@@ -60,7 +60,7 @@ export async function registerUser(email, password, name, passwordConfirmation) 
         });
         return { success: true, data: response.data };
     } catch (error) {
-        return { error: error.response?.data || 'An unexpected error occurred' };
+        return { error: error.response?.data || error };
     }
 }
 
