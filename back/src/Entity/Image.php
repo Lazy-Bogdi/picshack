@@ -34,7 +34,7 @@ class Image
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'images')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     #[Groups(['image:read'])]
     private ?User $owner = null;
 
@@ -46,7 +46,11 @@ class Image
 
     #[ORM\Column(type: 'boolean')]
     #[Groups(['image:read'])]
-    private bool $isPublic = true; // Default to public
+    private bool $isPublic = true;
+
+    #[ORM\Column(length: 255, nullable: true, unique: true)]
+    #[Groups(['image:read'])]
+    private ?string $uniqueId = null;
 
     public function getId(): ?int
     {
@@ -159,5 +163,17 @@ class Image
     public function getIsPublic(): bool
     {
         return $this->isPublic;
+    }
+
+    public function getUniqueId(): ?string
+    {
+        return $this->uniqueId;
+    }
+
+    public function setUniqueId(?string $uniqueId): static
+    {
+        $this->uniqueId = $uniqueId;
+
+        return $this;
     }
 }
