@@ -15,7 +15,7 @@ services:
   backend:
     build:
       context: ./back
-    container_name: symfony-backend
+    container_name: picshack-backend
     volumes:
       - ./back:/var/www/html
     ports:
@@ -32,7 +32,7 @@ services:
   frontend:
     build:
       context: ./front
-    container_name: react-frontend
+    container_name: picshack-frontend
     ports:
       - "5555:5555"
 
