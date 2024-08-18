@@ -2,7 +2,7 @@ import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
 
 // axios.defaults.baseURL = 'https://127.0.0.1:8000';
-axios.defaults.baseURL = "http://vps-7cceaa46.vps.ovh.net:9999";
+axios.defaults.baseURL = "http://vps-7cceaa46.vps.ovh.net:8437";
 
 // Function to validate the token
 const isTokenValid = (token) => {
