@@ -41,7 +41,7 @@ services:
     container_name: mysql
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: NWSN
+      MYSQL_DATABASE: pickshack
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     volumes:
