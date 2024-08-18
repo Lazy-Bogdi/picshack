@@ -19,7 +19,7 @@ services:
     volumes:
       - ./back:/var/www/html
     ports:
-      - "9000:9000"
+      - "9999:9999"
     environment:
       DATABASE_URL: mysql://user:password@mysql:3306/NWSN
     depends_on:
@@ -34,7 +34,7 @@ services:
       context: ./front
     container_name: react-frontend
     ports:
-      - "5000:5000"
+      - "5555:5555"
 
   mysql:
     image: mysql:8.0
