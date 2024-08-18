@@ -8,7 +8,8 @@ function ImageViewer() {
     const [imageData, setImageData] = useState(null);
     const [canView, setCanView] = useState(null);
     const [error, setError] = useState(null);
-    const baseURL = 'https://127.0.0.1:8000';
+    // const baseURL = 'https://127.0.0.1:8000';
+    const baseURL = "http://vps-7cceaa46.vps.ovh.net:9999";
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     // console.log(isAuthenticated)
