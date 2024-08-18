@@ -31,4 +31,4 @@ RUN chown -R www-data:www-data /var/www/html
 
 # Expose port 9000 and set entrypoint
 EXPOSE 9999
-ENTRYPOINT ["docker-entrypoint.sh"]
+# ENTRYPOINT ["docker-entrypoint.sh"]
